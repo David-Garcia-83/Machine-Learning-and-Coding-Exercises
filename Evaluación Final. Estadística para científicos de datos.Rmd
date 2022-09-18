@@ -1,0 +1,817 @@
+---
+title: "Evaluación Final. Estadística para científicos de datos"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Caso práctico final. Estadística
+
+
+Este es el último caso práctico de este módulo. Para realizarlo, ha de escogerse una BBDD para realizar una
+exploración estadística propia de un científico de datos. Para ello, se pueden seguir los siguientes pasos para
+desarrollar el proyecto:
+
+__PASO UNO__
+
+Definir un solo objetivo para el estudio con una BBDD. En este paso, se va a definir un objetivo de estudio
+(es muy importante que solo sea uno). Se definirá siguiendo estos puntos:
+
+¿Qué problema se quiere solucionar con estos datos?
+¿Qué significan las variables?
+¿Qué tipo de variables hay?
+Definir un objetivo que ayude a solucionar el problema.
+
+
+__PASO DOS__
+
+Exploración de datos:
+
+Crear los gráficos más apropiados.
+Interpretar los gráficos.
+Encontrar los primeros indicios y sacar las preconclusiones.
+Listar por orden de importancia los indicios que han desvelado los gráficos.
+
+
+__PASO TRES__
+
+Ahora es momento de decidir si las preconclusiones son ciertas o no. Apoyarse en la estadística inferencial y del diseño de experimentos.
+
+Encontrar las técnicas más apropiadas para corroborar las preconclusiones con la ayuda de un mapa.
+Diseñar la metodología de análisis.
+Aplicar esta metodología.
+Resumir los resultados.
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+
+https://www.kaggle.com/russellyates88/suicide-rates-overview-1985-to-2016
+
+
+Este conjunto de datos compilados se basó en otros cuatro conjuntos de datos vinculados por tiempo y lugar, y se construyó para encontrar señales correlacionadas con el aumento de las tasas de suicidio entre diferentes cohortes a nivel mundial, en todo el espectro socioeconómico.
+
+
+
+
+#### **PASO UNO** 
+
+El objetivo del estudio consistirá en encontrar las relación de las variables que más influyen en el aumento de la tasa de suicidios. 
+El problema que queremos solucionar por tanto es el inherente a todas estas muertes que conlleva dicha tasa, y encontrar las variables en las que más es obligado trabajar o seguir investigando si queremos reducir drásticamente la tasa de suicidios.
+
+
+Las variables que estudiaremos serán: 
+
+
+ + **country**: variable categórica nominal. 
+ 
+ + **year**: variable numérica discreta.
+ 
+ + **sex**: variable categórica binaria o dicotómica.
+ 
+ + **age** group: variable categórica ordinal
+ 
+ + **count** of suicides: Suicidios totales, variable numérica discreta.
+ 
+ + **population**: numérica discreta.
+ 
+ + **suicides.100k** : Porcentaje de suicidios por cada 100000 habitantes, será nuestra variable de interés, variable numérica continua.  
+ 
+ + **country-year**: País y año 
+ 
+ + **HDI for year**: Índice de desarrollo humano por año, mide el nivel de desarrollo de cada país atendiendo a variables como la          esperanza de vida, la educación o el ingreso per cápita. Variable numérica continua con valores entre 0 y 1.
+ 
+ + **gdpforyear**: Producto interior bruto por año (Conjunto de los bienes y servicios producidos en un país). Variable Numérica
+ 
+ + **gdppercapita**: Producto Interno Bruto per cápita (Relación entre el valor total de todos los bienes y servicios finales generados    durante un año por la economía de una nación o estado y el número de sus habitantes en ese año.) Numérica 
+ 
+ + **generation**: generación (basado en la media de los grupos de edad). Variable categórica ordenada.
+
+
+
+
+
+
+####**PASO DOS**
+
+
+comenzaremos con un análisis exploratorio inicial para transformar, limpiar y ordenar los datos.
+
+
+
+```{r}
+
+library(summarytools) # automatiza el EDA: resumenes estadísticos de datos numéricos y frecuencias absolutas y relativas de categóricos 
+library(DataExplorer) # lo utilizaremos para automatizar la visualización en el análisis univariable
+library(tidyverse) # incluye los paquetes de manipulación de datos dplyr y tidyr, así como el de visualización ggplot2
+
+datos <- read.csv('../Prueba Final/master.csv',
+                  header = TRUE,
+                  sep = ",")
+
+
+
+head(datos, 10)
+
+```
+
+
+
+```{r}
+str(datos)
+summary(datos)
+```
+
+
+En una primera aproximación a los datos nos damos cuenta que deberemos transformar las variables tipo caracter a factor, para reflejar sus niveles, excepto para "gdp_for_year", que debe ser una variable numérica continua.
+
+
+```{r}
+# Reemplazamos las comas y transformamos la variable a tipo numérico
+
+datos$gdp_for_year....  <-as.numeric(gsub(",", "", datos$gdp_for_year....))
+
+summary(datos$gdp_for_year....)
+```
+
+Antes de continuar con las transformaciones visualizaremos los valores perdidos.
+
+
+```{r}
+plot_missing(datos)
+```
+
+Tenemos un porcentaje demasiado alto de valores perdidos en la columna de Indice de desarrollo humano. Pero como consideramos que se puede tratar de una variable importante, antes de decidir si prescindimos de dicha columna, veamos como quedan los datos sin valores nulos. 
+
+Nos fijaremos sobre todo en la columna año y país, para confirmar que seguimos contando con una muestra lo suficientemente heterogénea, y nos fijaremos también en la variable objetivo, para observar cómo es afectada.
+
+
+
+```{r}
+datos_sin_nulos <-(datos[complete.cases(datos), ])
+
+str(datos_sin_nulos) # hemos pasado de una muestra de más de 27000 observaciones a 8364
+summary(datos_sin_nulos)  
+```
+
+
+```{r}
+par(mfrow = c(1,2))
+hist(datos$year)
+hist(datos_sin_nulos$year)
+par(mfrow = c(1,1))
+
+
+length(unique(datos$ï..country))
+length(unique(datos_sin_nulos$ï..country))
+
+
+boxplot(datos$suicides.100k.pop, datos_sin_nulos$suicides.100k.pop,
+        names = c("Datos con nulos", "Datos sin nulos"),
+        main = "Tasa de suicidios por cada 100k habitantes",
+        col = c("coral","cornsilk"))
+
+```
+
+
+
+Observamos que, aunque perdemos muchas observaciones, el rango de años representados es prácticamente el mismo, en la variable paises sólo hemos perdido 11 valores únicos de 101 totales, los estadísticos como el rango intercuartílico y la mediana tampoco se han visto afectados, como se puede comprobar en los diagramas de caja y bigotes.
+
+Para terminar de decidir si continuamos con dicha variable, estudiaremos si existe una correlación entre ambas:
+
+```{r}
+
+ggplot(data = datos_sin_nulos,
+       aes(x= suicides.100k.pop, 
+           y= HDI.for.year))+
+               geom_point(alpha=0.3)
+
+```
+
+
+```{r}
+cor(select(datos_sin_nulos, suicides.100k.pop, HDI.for.year))
+```
+
+El coeficiente de correlación de Pearson nos confirma que la correlación entre ambas variables es prácticamente nula.
+Recordemos que dicho coeficiente oscila entre los valores -1 y 1, y se puede interpretar que existe una correlación fuerte o alta cuando el valor es inferior a -0.5 o superior a 0.5 .
+
+
+```{r}
+summary(lm(suicides.100k.pop~HDI.for.year, data = datos_sin_nulos))
+```
+
+
+Para terminar de confirmar esta teoría, si aplicamos una regresión lineal para predecir la tasa de suicidios en función del índice de desarrollo humano, aunque el p-valor obtenido (1.035e-11) nos indica que la variable "HDI.for.year" es estadísticamente significativa (<0.05), el coeficiente de determinación R^2 nos detalla que sólo es capaz de explicar el 0.5% de la variabilidad observada en la tasa de suicidios.
+
+Por ello, continuaremos con el conjunto de datos inicial, eliminando esta variable.
+
+```{r}
+head(select(datos, ï..country, year, country.year))
+
+```
+
+
+
+Haremos los propio también con country.year, que nos ofrece información redundante, modificaremos el nombre de las columnas que contengan caracteres extraños, para mejorar la legibilidad, y transformaremos las variables tipo caracter a factor definiendo sus niveles cuando sean ordenados.
+
+
+```{r}
+datos <- select(datos, -HDI.for.year, -country.year)
+
+colnames(datos)[c(1, 7, 8, 9)] <- c("country", "suicides_rate", "gdp_for_year" , "gdp_per_capita")
+
+str(datos)
+```
+
+
+```{r}
+datos$country <- as.factor(datos$country)
+datos$sex <- as.factor(datos$sex)
+datos$age <- factor(datos$age, order = TRUE, levels = c("5-14 years", "15-24 years", "25-34 years","35-54 years",
+                                                        "55-74 years", "75+ years" ))
+datos$generation <- factor(datos$generation, order = TRUE, levels = c("G.I. Generation","Silent","Boomers", 
+                                                                      "Generation X", "Millenials", "Generation Z" ))
+
+```
+
+
+```{r}
+colSums(is.na(datos))
+colSums(datos == "")
+colSums(datos == "unknown")
+sum(datos == "unknown")
+```
+
+Ahora que ya tenemos los datos transformados y limpios, haremos un analisis general univariable y empezaremos a estudiar las relaciones de las distintas variables con nuestra variable de interés.
+
+
+
+# Análisis Univariable
+
+
+```{r}
+descr(datos) # descripción de variables numéricas, paquete summarytools
+```
+
+
+
+```{r}
+freq(datos) # frecuencias absolutas y relativas globales de variables categóricas, paquete summaytools
+```
+
+Como vemos, el muestreo es bastante proporcionado, ninguno de los países incluídos representan  más del 1.5 % del total de frecuencias. Únicamente existe más diferencia en la variable "generation".
+
+
+
+```{r}
+ggplot(data =datos, 
+       aes(x=sex, fill = sex)) +
+        geom_bar()
+```
+
+
+
+```{r}
+pie(table(datos$age))
+```
+
+
+
+```{r}
+ggplot(datos, aes(generation, fill = generation)) + geom_bar()
+```
+
+
+
+
+```{r}
+plot_histogram(datos) # histograma de todas las variables cuantitativas
+```
+
+Como observamos, lo más habitual es que los ratios y totales de suicidios tengan valores bajos en comparación con el resto de posibles valores. 
+
+
+```{r}
+
+plot(datos$suicides_rate, col = "firebrick1")
+
+```
+```{r}
+boxplot(datos$suicides_rate,
+        border = "darkorchid4",
+        col = "darkorchid1",
+        main= "Diagrama de Caja y Bigotes sobre la tasa de suicidios",
+        las= 1,
+        outline = TRUE,
+        outcol = "darkred"
+        )
+
+```
+
+
+```{r}
+summary(datos$suicides_rate)
+IQR(datos$suicides_rate)
+```
+
+El 75 % de los datos tienen tasas de suicidio por debajo de 16.62 por cada 100000 habitantes, pero el 25% restante se reparte a lo largo de un rango muy amplio, hasta 224.97 .
+
+
+```{r}
+
+plot(density(datos$suicides_rate), main= "Diagrama de densidad de la tasa de suicidios")
+
+abline(v=mean(datos$suicides_rate), lty = 2, lwd = 3, col = "darkgreen")
+abline(v=median(datos$suicides_rate), lty = 4, lwd = 3, col = "red")
+
+```
+
+
+La distribución de nuestra variable objetivo es claramente asimétrica positiva, con una cola a la derecha que desplaza la media a la derecha de la mediana.
+
+
+
+
+
+# Análisis Bivariable
+
+
+
+```{r}
+plot_boxplot(datos, by= 'suicides_rate') # paquete DataExplorer
+
+# Diagramas boxplot de todas las variables cuantitativas en función de las tasa de suicidios
+
+```
+
+
+Lo que podemos interpretar de estos diagramas boxplot, es que las tasas de suicidio más altas (a partir de 135), por regla general, suelen mostrar rangos más definidos que nos permiten relacionarlo con niveles más bajos de producto interior bruto por año y per cápita, con niveles más bajos de población, que a su vez, en números absolutos representan un número total de muertes menor. Otro aspecto destacado es que el rango más alto de tasas de suicidios (180, 225), establece su mediana en torno al año 2010, con sus valores concentrados en años más recientes que en el resto de rangos.  
+
+En cambio, cuando examinamos las tasas de suicidio por debajo de 135, observamos el 50% de sus valores (IQR) también en niveles bajos del resto de variables, pero la gran presencia de valores atípicos o outliers hace que sea menos evidente y más improbable establecer esa relación. Es decir, existen tasas de suicidios medias/bajas también en países más ricos y más poblados, pero se trata de casos más aislados. 
+
+Podemos intuir que cuando exista una tasa de suicidio alta está relacionada a países más pobres y pequeños, pero no siempre los países más pobres y pequeños tienen tasas de suicidio altas.  
+
+
+Como parece interesante estudiar esta relación, crearemos una variable cualitativa ordenada a partir de "suicides_rate", dividiendo los datos en tres tramos.
+
+
+```{r}
+datos = datos %>% 
+  mutate(suicides_rate_discrete = if_else(suicides_rate > 135, "high", if_else(suicides_rate > 45, "mid", "low")))
+
+datos$suicides_rate_discrete <- factor(datos$suicides_rate_discrete, order = TRUE, levels = c("low" , "mid" , "high"))
+
+levels(datos$suicides_rate_discrete)
+
+```
+
+
+Continuaremos con el análisis de las relaciones con variables cuantitativas antes de pasar a las cualitativas.
+
+
+```{r}
+
+ggplot(data = datos, aes(suicides_rate, gdp_per_capita, color= suicides_rate_discrete))+
+        geom_point()
+
+```
+
+
+```{r}
+
+# si los siguientes comandos no devuelven output, ejecutar en consola
+
+datos %>% filter( suicides_rate_discrete == "high") %>% 
+        arrange(desc(gdp_per_capita)) %>% 
+        select(country, year, suicides_rate_discrete, gdp_per_capita, suicides_rate, suicides_no)
+        
+```
+
+Aquí un resumen de las observaciones con tasa alta, ordenados de mayor renta a menor
+
+
+```{r}
+datos %>% 
+  group_by(suicides_rate_discrete) %>%
+  summarize(max(gdp_per_capita), mean(gdp_per_capita))
+
+```
+
+Cuando la ratio de suicidios es alta, el nivel de renta llega a máximos más bajos.
+
+
+
+```{r}
+ggplot(data = datos, aes(suicides_rate, population, color= suicides_rate_discrete))+
+        geom_point()
+```
+
+```{r}
+datos %>% 
+  group_by(suicides_rate_discrete) %>%
+  summarize(max(population), mean(population))
+
+```
+
+Niveles altos de suicidio están asociados a poblaciones sustancialmente más pequeñas.
+
+
+```{r}
+ggplot(data = datos, aes(year, suicides_rate, color= suicides_rate_discrete))+
+        geom_point()
+
+```
+
+A la hora de estudiar la relación con el año, no encontramos ningún patrón claro.
+
+
+
+Aplicamos la matriz de correlación de Pearson para calcular las relaciones entre variables cuantitativas.
+
+```{r}
+
+plot_correlation(datos[,c(2, 5:9)])
+```
+Como vemos, no existe ninguna variable numérica que se pueda relacionar en su totalidad con la tasa de suicidios. Únicamente podemos encontrar algún problema de colinealidad entre "population" y "gdp_for_year" (0.71), y "population" y "suicides_no" (0.62) respectivamente.
+
+
+
+Pasamos a estudiar las relaciones con variables cualitativas
+
+```{r}
+
+barplot(table(datos$suicides_rate_discrete), 
+        main = "Frecuencias absolutas de tasas de suicidio", 
+        col = c("cadetblue", "chartreuse4", "coral4"),
+        ylim = c(0,30000))
+
+```
+
+
+```{r}
+ggplot(datos, aes(country, suicides_rate, fill= suicides_rate_discrete))+geom_col()
+```
+
+
+La variable country es un factor con 101 niveles y con distinto número de observaciones para cada nivel, lo que complica su visualización.  La mayoría tienen un ratio bajo en la tasa de suicidios. Todos los países con tasas altas, también tienen observaciones con tasas medias y bajas, aunque con proporciones muy diferentes.  
+
+
+Nos centraremos ahora en filtrar aquellos que tengan tasas altas de suicidio.
+
+```{r}
+
+datos_suic_high <- datos %>% 
+  filter(suicides_rate_discrete == "high") %>%
+  group_by(country) %>% 
+  summarise(country = unique(country), 
+            mean_high_suicides_rate = round(mean(suicides_rate),2)) %>% arrange(desc(mean_high_suicides_rate)) 
+
+
+datos_suic_high
+
+mean(datos$suicides_rate)
+```
+
+Cuando filtramos por tasas altas de suicidio, la diferencia de la media de estos países con la media general es muy importante. 
+
+
+```{r}
+
+ggplot(data = datos_suic_high, aes(x = country, y = mean_high_suicides_rate, color=country)) + geom_point()
+
+```
+
+
+```{r}
+datos %>% 
+  filter(suicides_rate > 45) %>% 
+  group_by(country) %>% summarize(country = unique(country), 
+                                  max_suicide_rate = max(suicides_rate),
+                                  mean_high_mid_suici_rate = round(mean(suicides_rate),2),
+                                  total_suicides_no = sum(suicides_no),
+                                  latest_year = max(year)) %>%  arrange(desc(max_suicide_rate))
+```
+
+Arriba un resumen de los países con tasas superiores a 45 suicidios por cada 100000, (niveles medio y alto), junto con la media de estos dos niveles, el número total de fallecidos, y el último año en que aparecieron entre estos dos niveles.
+
+
+```{r}
+datos %>% group_by(country) %>%
+  filter(country=="Aruba") %>% summarise(country = unique(country),mean_suicides = mean(suicides_rate))
+
+
+datos %>% group_by(country) %>%
+  filter(country=="Seychelles") %>% summarise(country = unique(country),mean_suicides = mean(suicides_rate))
+
+datos %>% group_by(country) %>%
+  filter(country=="Suriname") %>% summarise(country = unique(country),mean_suicides = mean(suicides_rate))
+
+datos %>% group_by(country) %>%
+  filter(country=="Republic of Korea") %>% summarise(country = unique(country),mean_suicides = mean(suicides_rate))
+
+datos %>% group_by(country) %>%
+  filter(country=="Austria") %>% summarise(country = unique(country),mean_suicides = mean(suicides_rate))
+
+mean(datos$suicides_rate)
+```
+
+Sin embargo, cuando filtramos el dataset completo por estos Países, y calculamos la media de tasa de suicidios, el valor que obtenemos es a veces menor y a veces mayor que la media general del dataset (12.81%), de modo que no podemos afirmar que la variable país esté siempre asociada o explique una tasa de suicidios más alta.
+
+
+```{r}
+datos %>%
+  ggplot(aes(x = sex, y = suicides_rate)) +
+    geom_boxplot()
+
+```
+
+
+Los gráficos reflejan que los hombres tienen más probabilidades, o son más propensos que las mujeres a sufrir estos sucesos.
+
+
+```{r}
+
+datos %>%
+  ggplot(aes(x = suicides_rate, fill = sex)) +
+    geom_density(alpha = 0.3)
+
+```
+```{r}
+ggplot(datos) +
+    geom_bar(aes(x =sex, fill = suicides_rate_discrete)) +
+  xlab("Proporción de Tasa de suicios en función del sexo") +
+  ylab(NULL)
+```
+
+
+Veamos ahora el factor edad.
+
+```{r}
+ggplot(datos, aes(x = age, y = suicides_rate, fill = suicides_rate_discrete)) + 
+  geom_bar(stat = 'identity', position = 'dodge') + 
+  xlab("Grupo de edad")+
+  ylab("Tasa de suicidio")
+```
+
+
+El gráfico evidencia que a medida que se avanza de edad este riesgo va aumentando.
+Las tasas de suicidio más altas las padecen los sujetos comprendidos entre 35-54 años  y más de 75 años.
+
+
+Veremos por último, la variable generación.
+
+```{r}
+
+datos %>%
+ggplot(aes( x = generation, y = suicides_rate, fill = suicides_rate_discrete))+
+  geom_bar(stat = "identity", position = "dodge")+
+  xlab("Generación")+
+  ylab("Tasa de suicidios")
+
+```
+
+
+Muy relacionada con la anterior, nos demuestra que las generaciones más antiguas tienen más probabilidades de formar parte de estos sucesos.
+
+
+
+# Preconclusiones
+
+Cuando hemos examinado las distintas variables cuantitativas, hemos demostrado gráfica y matemáticamente, mediante el coeficiente de correlación de Pearson, que ninguna muestra una correlación positiva o negativa que sirva para explicar la variable "suicides_rate" ("suicides.100k.pop" en el dataframe original), al menos en su totalidad. 
+Aunque hemos podido demostrar, gráficamente y filtrando datos, que tasas de suicidio altas (superiores a 135) están relacionadas con los niveles de población y PIB más bajos, no necesariamente una población y PIB bajos explican tasas de suicidio altas. Es decir:
+
+  + Una tasa de suicidio alta está relacionada a países más pobres y pequeños.
+  + No siempre los países más pobres y pequeños tienen tasas de suicidio altas, también tienen tasas medias y bajas.
+  + No hay países ricos y muy poblados con tasas de suicidio altas. 
+
+La variable "country" muestra una cierta relación con la tasa de suicidios, aunque no siempre paises con tasas altas muestran una tasa media superior a la general.
+
+La variable "sex", refleja que los varones tienden a participar más en tasas de suicidio altas y medias.
+
+La variable "generación" es la que mejor explica o más claramente está correlaciónada con el aumento de la tasa de suicidios. Las generaciones más antiguas tienen progresivamente más probabilidades de contribuir a aumentar estas cifras, 
+
+La variable "age" lógicamente, es muy similar a la anterior.
+
+
+
+
+
+
+#### **PASO TRES** 
+
+
+# Inferencia
+
+
+Para disipar las dudas que tenemos sobra la influencia del factor "country" sobre nuestra variable de interés, diseñaremos una experimento ANOVA o análisis de la varianza. El factor country es un factor de efectos aleatorios (una muestra aleatoria simple de todos los posibles niveles del mismo).
+
+
+La hipótesis nula H0: No hay diferencia entre las medias de los distintos niveles del factor "country"
+
+La hipótesis alternativa H1: al menos una de las medias de todos los niveles difiere del resto.
+
+
+El nivel de significación será 0,05, por debajo del cual entenderemos que existen evidencias suficientes para rechazar la hipótesis nula.
+
+
+```{r}
+boxplot(suicides_rate~country, data = datos, 
+        xlab = "Países",
+        ylab = "Tasa de suicidios")
+
+summary(aov(suicides_rate~country, data = datos))
+```
+
+
+Para el factor estudiado (country) hay 100 grados de libertad, la suma de los cuadrados de los tratamientos es 2206179, el error cuadrado medio o cuadrado medio del tratamiento es 22062, para los residuos existen 27719 grados de libertad, la suma de los cuadrados de los residuos es 7795834, el cuadrado medioa residual es 281. 
+
+El cociente de 22062 entre 281 nos resulta el estadístico de contraste F 78.44 , y el P-valor obtenido <2e-16 , que al ser inferior al nivel de significación 0.05 nos permite afirmar que es estadísticamente significativo, y por tanto afirmar que:
+
+Existe evidencia suficiente para rechazar la hipótesis nula de igualdad de medias entre los niveles del factor "country", al menos 1 es diferente del resto. 
+
+Por tanto la variabilidad encontrada en la tasa de suicidios a causa de del factor pais, podemos concluir que no se debe al azar. 
+
+
+
+
+
+## Regresión lineal
+
+
+
+Para cuantificar el grado de influencia o variabilidad de nuestra variable de interés en función de las demás, desarrollaremos un modelo de regresión lineal.
+
+El Contraste de hipótesis sobre la pendiente de la recta de regresión se plantea de la siguiente forma:
+
+
+- Hipótesis nula H0 : En la población de la que se extrajo la muestra, no hay una relación lineal entre nuestra variable dependiente      (suicides_rate)  y la variable independiente que estemos estudiando.
+
+- Hipótesis alternativa H1: En la población de la que se extrajo la muestra hay una relación lineal entre nuestra variable dependiente    (suicides_rate) y la  variable independiente que estemos estudiando.
+
+
+El nivel de significación o punto de corte será 0.05, por debajo del cual interpretaremos el resultado como estadísticamente significativo y que existen evidencias suficientes para rechazar la H0 de no linealidad. O dicho de otra forma, existen evidencias suficientes para no rechazar la hipótesis alternativa y entenderemos que existe una relación lineal.
+
+El Coeficiente de determinación R2 nos servirá para evaluar el ajuste del modelo, con valores entre 0 y 1, mostrando más capacidad predictiva cuando el coeficiente se acerque a 1.
+
+
+
+# Análisis univariable
+
+
+Empezaremos evaluando cada variable de forma individual, pero sólo las variables cualitativas, que son con las que hemos detectado relación.
+
+```{r}
+summary(lm(suicides_rate~country, data = datos))
+
+```
+
+
+Existe una relación lineal entre "suicides_rate" y "country" (p-valor< 0.05). El coeficiente de determinación R2 tiene un valor de 0.2206, es decir, la variable pais explica el 22 % de la variabilidad de "suicides_rate".
+
+Aún así, vemos que dentro del conjunto de países, no todos son estadísticamente significativos, y por tanto no todos contribuyen a explicar la variabilidad en "suicides_rate".
+
+La interpretación se haría tomando como coeficiente o intercepto a Albania. Es decir, cuando el país es Albania, la media de la tasa de suicidios es 3.5029. Cuando el país es Argentina, por ejemplo, la tasa media es 6.9664 puntos mayor que 3.5029. Cuando el país es Australia, la media de la tasa es 9.4899 puntos mayor que 3.5029.
+
+
+
+```{r}
+summary(lm(suicides_rate~year, data = datos))
+```
+
+
+Aunque la relación con el año es estadísticamente significativo (p-valor < 0.05), sólo contribuye a explicar el 0.1% de la variabilidad en "suicides_rate" 
+
+
+```{r}
+summary(lm(suicides_rate~sex, data = datos))
+```
+
+Existe una relación lineal estadísticamente significativa entre el sexo y la tasa de suicidios. Cuando es sexo es mujer, la tasa media es 5.39, cuando el sexo es hombre, la tasa media es 14.84 superior, es decir 20.23 . La variabilidad explicada es del 15.33%
+
+
+
+Para facilitar la interpretación para "age" y "generation", las transformaremos a factores sin ordenar
+
+```{r}
+datos$age <- factor(datos$age, order = FALSE, levels = c("5-14 years", "15-24 years", "25-34 years","35-54 years",
+                                                        "55-74 years", "75+ years" ))
+datos$generation <- factor(datos$generation, order = FALSE, levels = c("G.I. Generation","Silent","Boomers", 
+                                                                      "Generation X", "Millenials", "Generation Z" ))
+
+
+summary(lm(suicides_rate~age, data = datos))
+```
+
+
+
+Existe una relación estadísticamente significativa entre los grupos de edad y la tasa de suicidios. Cuando el grupo de edad es "5-14 years", la tasa media de suicidios es 0.6.
+
+Cuando el grupo de edad es "15-24 years", la tasa media de suicidios es 0.6 + 8.32
+
+Cuando el grupo de edad es "25-34 years", la tasa media de suicidios es 0.6 + 11.56 , y así sucesivamente. 
+
+De manera que confirmamos lo que habíamos anticipado en los gráficos. La variabilidad explicada es 14.06 %
+
+
+
+
+```{r}
+summary(lm(suicides_rate~generation, data = datos))
+```
+De modo similar a como ocurría con age, la relación con generation es también estadísticamente significativa. La variabilidad explicada es el 11.31 %
+
+
+
+
+Para confirmar que el nivel de renta per cápita no explica nuestra variable respuesta, la cuantificaremos. 
+
+```{r}
+summary(lm(suicides_rate~gdp_per_capita, data = datos))
+```
+
+El p-valor obtenido confirma que la relación no es estadísticamente significativa.
+
+
+
+# Análisis multivariable
+
+
+Introduciremos ahora todas las variables cualitativas, a excepción de la variable categórica "suicides_rate_discrete" que hemos creado a partir de nuestra variable objetivo.
+
+
+```{r}
+modelo <- lm(suicides_rate~. -suicides_rate_discrete , data = datos)
+
+summary(modelo)
+```
+
+El conjunto de todas las variables explica el 54.91 % de la variabilidad observada en la variable "suicides_rate". El p-valor del modelo es significativo (<0.05)
+
+
+
+Ahora construiremos un modelo “hacia atrás” para seleccionar el mejor conjunto de predictores. El valor matemático empleado para determinar la calidad del modelo va a ser Akaike (AIC).
+
+```{r}
+step(modelo, direction = "backward", trace = 1)
+```
+
+
+La función step confirma que el mejor modelo para explicar nuestra variable de interés es el formado por todas (a excepción de suicides_rate_discrete).
+
+```{r}
+modelo_final <-lm(formula = suicides_rate ~ (country + year + sex + age + suicides_no + 
+    population + gdp_for_year + gdp_per_capita + generation ), data = datos)
+
+
+summary(modelo_final)
+```
+
+
+En base a nuestro modelo podemos calcular los intervalos de confianza del 95% para la media de cada nivel.
+
+
+```{r}
+confint(modelo_final)
+```
+
+
+
+
+
+
+## Conclusiones
+
+
+El estudio inferencial ha servido para confirmar que:
+
+
+
+    + Ninguna de las variables cuantitativas sirve por sí sola para explicar nuestra variable objetivo "suicides_rate" (aunque sí sean        tenidas en cuenta en nuestro modelo multivariable final).
+
+    + El factor país es el que mantiene una relación mayor de influencia en nuestra variable respuesta (R squared = 22%).
+  
+    + El sexo influye en el aumento de las tasas de suicidio, afectando más a los hombres que a las mujeres con una diferencia de 14.84       puntos superior en la tasa media. El factor sexo explica el 15.33 % de la variabilidad de la variable dependiente.
+  
+    + La edad influye en el aumento de la tasa de suicidio, afectando progresivamente más a medida que ésta va avanzando. De esta forma       las generaciones más lejanas son las más afectadas. La edad y la generación explican entre el 17,58 % y el 11,31 % de la                variabilidad de la tasa de suicidios.
+  
+  
+    + El mejor conjunto de predictores para un modelo multivariable diseñado a través de la función "step" incluye a todas las                variables.
+      La variabilidad en la tasa de suicidios explicada por el modelo es del 54.91 %.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
