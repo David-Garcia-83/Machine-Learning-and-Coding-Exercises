@@ -1,0 +1,249 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1.Cargar el archivo “Airbnb_Milan.csv” como dataframe.
+2.Crear un nuevo dataframe que contenga únicamente las siguientes columnas:
+
+    “host_is_superhost”
+    “host_identity_verified”
+    “bathrooms”
+    “bedrooms”
+    “daily_price”
+    “security_deposit”
+    “minimum_nights”
+    “number_of_reviews”
+    “review_scores_rating”
+
+3. Cambiar los factores de la variable “host_is_superhost” de 0, 1 a: “SI” y, “NO”. (investigar la función recode).
+4. Cambiar los factores de la variable “host_identity_verified” de 0, 1 a: “VERIFICA” y “NO VERIFICA”.
+5. Mostrar un resumen estadístico de los datos.
+6. Filtrar el dataset por apartamentos cuyo mínimo de noches sea igual o menor que siete.
+7. ¿Cuál es el precio medio por día de una habitación en función de si el anfitrión tiene verificado o no su perfil?
+8. Quién tiene más número de reseñas, ¿un super host o no super host?
+9. Sobre la estadística anterior ¿quién tiene la puntuación media más alta?
+10. Crea un vector categórico llamado “CATEGORÍA”, en función de que, si para la puntuación de las reseñas tiene de 0 a 49, sea “NO ACONSEJABLE”; de 50 a 75 sea “ESTÁNDAR”; y de 76 a 100 sea “TOP”.
+
+11. Mostrar las frecuencias de la variable CATEGORÍA.
+12. Obtener el histograma del precio por día.
+13. Estudiar la relación entre los dormitorios y baños de forma gráfica.
+14. Mostrar un histograma del número de reseñas en función de si es un usuario verificado o no.
+15. Mostrar un histograma por cada valor de “CATEGORÍA” en el que se enseñe la cuantía del depósito de seguridad en función de si el anfitrión es super host o no.
+
+------------------------------------------------------------------------------------------------------------------------------
+
+
+1.Cargar el archivo “Airbnb_Milan.csv” como dataframe.
+
+```{r}
+df <- read.csv('Airbnb_Milan.csv')
+
+str(df) # En un primer análisis de la estructura comprobamos que el dataset tiene 9322 objetos o filas, por 61 variables o columnas 
+```
+
+
+2.Crear un nuevo dataframe que contenga únicamente las siguientes columnas:
+
+    “host_is_superhost”
+    “host_identity_verified”
+    “bathrooms”
+    “bedrooms”
+    “daily_price”
+    “security_deposit”
+    “minimum_nights”
+    “number_of_reviews”
+    “review_scores_rating”
+
+Respuesta: Existen varias formas de realizar esta seleccion
+
+```{r}
+#Con el paquete básico de R lo podríamos hacer con la funcion 'subset' para crear un subconjunto con dichas columnas
+
+newdf <- subset(df, select = c( 'host_is_superhost',
+                 'host_identity_verified',
+                 'bathrooms',
+                 'bedrooms',
+                 'daily_price',
+                 'security_deposit',
+                 'minimum_nights',
+                 'number_of_reviews',
+                 'review_scores_rating'))
+
+str(newdf)
+```
+
+
+
+```{r}
+
+# Otra forma es utilizando la función select del paquete dplyr
+
+library(dplyr)#cargamos el paquete
+
+new_df <- select(df, host_is_superhost,
+                 host_identity_verified,
+                 bathrooms,
+                 bedrooms,
+                 daily_price,
+                 security_deposit,
+                 minimum_nights,
+                 number_of_reviews,
+                 review_scores_rating)
+
+str(new_df)
+```
+
+3. Cambiar los factores de la variable “host_is_superhost” de 0, 1 a: “SI” y, “NO”. (investigar la función recode).
+
+```{r}
+# la funcion recode pertenece al paquete dplyr.
+# Si en una celda de código como éste, escribimos el nombre de la función y pulsamos F1, nos aparece un texto de ayuda 
+
+# For numeric values, named arguments can also be used
+# num_vec <- c(1:4, NA)
+# recode(num_vec, `2` = 20L, `4` = 40L)
+
+# Como los valores que queremos modificar son de tipo numérico, y como una columna de un dataframe es un vector, sólo tenemos 
+# que seguir el mismo esquema y asignarlo a dicha columna como si fuera una nueva variable.
+
+
+newdf$host_is_superhost <- recode(newdf$host_is_superhost, '0' = 'SI', '1' = 'NO')
+
+str(newdf) # ahora las variables han pasado a ser de tipo caracter
+```
+
+
+4. Cambiar los factores de la variable “host_identity_verified” de 0, 1 a: “VERIFICA” y “NO VERIFICA”.
+
+
+```{r}
+newdf$host_identity_verified <- recode(newdf$host_identity_verified, '0' = 'VERIFICA', '1' = 'NO VERIFICA')
+
+str(newdf)
+```
+
+5. Mostrar un resumen estadístico de los datos.
+
+```{r}
+summary(newdf)
+```
+
+
+6. Filtrar el dataset por apartamentos cuyo mínimo de noches sea igual o menor que siete.
+
+```{r}
+# Utilizamos la función filter del paquete dplyr
+
+newdf <-filter(newdf, minimum_nights <= 7)
+
+max(newdf$minimum_nights)
+```
+
+7. ¿Cuál es el precio medio por día de una habitación en función de si el anfitrión tiene verificado o no su perfil?
+
+
+```{r}
+# Filtramos el df por los valores de la columna host_identity_verified
+
+verified_newdf <- filter(newdf, host_identity_verified == 'VERIFICA')
+
+not_verified_newdf <- filter(newdf, host_identity_verified == 'NO VERIFICA')
+
+# una vez filtrados, obtenemos la media de la columna daily price, y redondeamos el resultado a 2 decimales máximo
+
+round(mean(verified_newdf$daily_price),2)  # 103.75 precio medio por habitación para perfiles verificados
+round(mean(not_verified_newdf$daily_price),2) # 103.90  para perfiles no verificados.
+```
+
+
+8. Quién tiene más número de reseñas, ¿un super host o no super host?
+
+```{r}
+# Volvemos a filtrar el df, ahora por los valores de la columna host_is_superhost
+
+superhost_newdf <- filter(newdf, host_is_superhost == 'SI')
+not_superhost_newdf <- filter(newdf, host_is_superhost == 'NO')
+
+# Una vez filtrado, obtenemos la suma de los valores de la columna number_of_reviews
+
+sum(superhost_newdf$number_of_reviews) # comprobamos que los apartamento superhost, en su conjunto, tienen más reseñas
+
+sum(not_superhost_newdf$number_of_reviews)
+
+```
+
+
+```{r}
+# si lo que quisieramos saber es cual de los dos tipos tiene más reseñas de media
+
+round(mean(superhost_newdf$number_of_reviews),2)
+round(mean(not_superhost_newdf$number_of_reviews),2) #comprobamos que los apartamentos no superhost tienen de media 
+#el doble de reseñas
+```
+```{r}
+# Y si lo que queremos saber es cual de los dos tipos tiene el valor máximo en número de reseñas para un apartamento
+
+max(superhost_newdf$number_of_reviews)
+max(not_superhost_newdf$number_of_reviews) # el maximo número de reseñas lo tiene un apartamento no superhost
+```
+9. Sobre la estadística anterior ¿quién tiene la puntuación media más alta?
+
+
+```{r}
+
+round(mean(superhost_newdf$review_scores_rating),2)
+
+
+round(mean(not_superhost_newdf$review_scores_rating),2) #la puntuación media más alta (96.94) la tiene el conjunto NO superhost
+```
+
+10. Crea un vector categórico llamado “CATEGORÍA”, en función de que, si para la puntuación de las reseñas tiene de 0 a 49, sea “NO ACONSEJABLE”; de 50 a 75 sea “ESTÁNDAR”; y de 76 a 100 sea “TOP”.
+
+```{r}
+
+#creo una nueva columna basándome en la columna de puntuación, con sus mismos valores
+
+newdf$categoria = newdf$review_scores_rating 
+
+
+# comprobamos que nos ha generado una nueva columna de numeros enteros
+
+str(newdf) 
+      
+```
+
+```{r}
+# cambiamos los valores 
+
+newdf$categoria[newdf$categoria >=76 & newdf$categoria <= 100] <- 'TOP'
+
+newdf$categoria[newdf$categoria >=50 & newdf$categoria <= 75] <- 'ESTANDAR'
+
+newdf$categoria[newdf$categoria<50] <-'NO ACONSEJABLE'
+```
+
+```{r}
+# comprobamos los cambios sobre las primeras 50 filas de ambas columnas (si no se ejecuta, probar en consola)
+
+select(newdf[0:50,], review_scores_rating : categoria) 
+
+```
+
+
+```{r}
+# Por último pasamos la nueva columna a tipo factor
+
+newdf$categoria <- as.factor(newdf$categoria)
+
+levels(newdf$categoria)
+
+str(newdf)
+```
+
+
+
+11. Mostrar las frecuencias de la variable CATEGORÍA.
+
+
+
